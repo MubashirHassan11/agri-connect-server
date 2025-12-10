@@ -11,17 +11,16 @@ const setupMiddleware = (app) => {
     'http://localhost:3001'
   ];
 
-  if (env.VERCEL_URL) {
-    const vercelUrl = env.VERCEL_URL.startsWith('http')
-      ? env.VERCEL_URL
-      : `https://${env.VERCEL_URL}`;
-    allowedOrigins.push(vercelUrl);
+  if (env.DEPLOYED_URL) {
+    const deployedUrl = env.DEPLOYED_URL.startsWith('http')
+      ? env.DEPLOYED_URL
+      : `https://${env.DEPLOYED_URL}`;
+    allowedOrigins.push(deployedUrl);
   }
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        logger.info(`Origin: ${origin}`);
         if (!origin) return callback(null, true);
 
         if (allowedOrigins.includes(origin)) {

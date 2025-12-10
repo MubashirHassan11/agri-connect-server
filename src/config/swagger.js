@@ -8,14 +8,14 @@ const servers = [
   }
 ];
 
-if (env.VERCEL_URL) {
-  const vercelUrl = env.VERCEL_URL.startsWith('http')
-    ? env.VERCEL_URL
-    : `https://${env.VERCEL_URL}`;
+if (env.DEPLOYED_URL) {
+  const deployedUrl = env.DEPLOYED_URL.startsWith('http')
+    ? env.DEPLOYED_URL
+    : `https://${env.DEPLOYED_URL}`;
 
   servers.push({
-    url: vercelUrl,
-    description: 'Production server (Vercel)'
+    url: deployedUrl,
+    description: 'Production server'
   });
 }
 
