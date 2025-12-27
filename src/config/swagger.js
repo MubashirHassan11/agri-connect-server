@@ -1,5 +1,4 @@
 import swaggerJsdoc from 'swagger-jsdoc';
-import env from './env.js';
 
 const servers = [
   {
@@ -7,17 +6,6 @@ const servers = [
     description: 'Development server'
   }
 ];
-
-if (env.DEPLOYED_URL) {
-  const deployedUrl = env.DEPLOYED_URL.startsWith('http')
-    ? env.DEPLOYED_URL
-    : `https://${env.DEPLOYED_URL}`;
-
-  servers.push({
-    url: deployedUrl,
-    description: 'Production server'
-  });
-}
 
 const options = {
   definition: {

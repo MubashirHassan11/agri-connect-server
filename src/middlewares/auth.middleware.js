@@ -1,6 +1,31 @@
-import jwt from 'jsonwebtoken';
-import env from '../config/env.js';
 import { sendError } from '../utils/response.js';
+import { verifyToken } from '../utils/jwt.js';
+
+const publicRoutes = ['/', '/api/auth', '/api/docs'];
+
+const isPublicRoute = (path) => {
+  return publicRoutes.some((route) => path.startsWith(route));
+};
+
+export const globalAuth = async (req, res, next) => {
+  if (isPublicRoute(req.path)) {
+    return next();
+  }
+
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+      return sendError(res, 'No token provided', 401);
+    }
+
+    const decoded = verifyToken(token);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return sendError(res, error.message || 'Invalid token', 401);
+  }
+};
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -10,10 +35,10 @@ export const authenticate = async (req, res, next) => {
       return sendError(res, 'No token provided', 401);
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET);
+    const decoded = verifyToken(token);
     req.user = decoded;
     next();
   } catch (error) {
-    return sendError(res, error.message, 401);
+    return sendError(res, error.message || 'Invalid token', 401);
   }
 };

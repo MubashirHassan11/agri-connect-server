@@ -1,22 +1,16 @@
 import express from 'express';
 import cors from 'cors';
 import { requestLogger } from './logger.middleware.js';
-import env from '../config/env.js';
+import { globalAuth } from './auth.middleware.js';
 import logger from '../utils/logger.js';
 
 const setupMiddleware = (app) => {
+  logger.info('Setting up middleware...');
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:4000',
     'http://localhost:3001'
   ];
-
-  if (env.DEPLOYED_URL) {
-    const deployedUrl = env.DEPLOYED_URL.startsWith('http')
-      ? env.DEPLOYED_URL
-      : `https://${env.DEPLOYED_URL}`;
-    allowedOrigins.push(deployedUrl);
-  }
 
   app.use(
     cors({
@@ -38,6 +32,8 @@ const setupMiddleware = (app) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
+  app.use(globalAuth);
+  logger.info('Middleware setup complete');
 };
 
 export default setupMiddleware;

@@ -1,6 +1,5 @@
 import express from 'express';
 import * as userController from '../controllers/user.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
@@ -18,7 +17,7 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized
  */
-router.get('/', authenticate, userController.getAllUsers);
+router.get('/', userController.getAllUsers);
 
 /**
  * @swagger
@@ -42,6 +41,6 @@ router.get('/', authenticate, userController.getAllUsers);
  *       401:
  *         description: Unauthorized
  */
-router.get('/:id', authenticate, userController.getUserById);
+router.get('/:id', userController.getUserById);
 
 export default router;

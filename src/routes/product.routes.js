@@ -1,6 +1,5 @@
 import express from 'express';
 import * as productController from '../controllers/product.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
@@ -40,7 +39,7 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized
  */
-router.post('/', authenticate, productController.createProduct);
+router.post('/', productController.createProduct);
 
 /**
  * @swagger
@@ -54,7 +53,7 @@ router.post('/', authenticate, productController.createProduct);
  *       200:
  *         description: List of products
  */
-router.get('/', authenticate, productController.getAllProducts);
+router.get('/', productController.getAllProducts);
 
 /**
  * @swagger
@@ -76,7 +75,7 @@ router.get('/', authenticate, productController.getAllProducts);
  *       404:
  *         description: Product not found
  */
-router.get('/:id', authenticate, productController.getProductById);
+router.get('/:id', productController.getProductById);
 
 /**
  * @swagger
@@ -115,7 +114,7 @@ router.get('/:id', authenticate, productController.getProductById);
  *       401:
  *         description: Unauthorized
  */
-router.put('/:id', authenticate, productController.updateProduct);
+router.put('/:id', productController.updateProduct);
 
 /**
  * @swagger
@@ -139,6 +138,6 @@ router.put('/:id', authenticate, productController.updateProduct);
  *       401:
  *         description: Unauthorized
  */
-router.delete('/:id', authenticate, productController.deleteProduct);
+router.delete('/:id', productController.deleteProduct);
 
 export default router;

@@ -1,58 +1,59 @@
 import User from '../models/User.js';
-import jwt from 'jsonwebtoken';
-import env from '../config/env.js';
 import { ConflictError, BadRequestError } from '../utils/errors.js';
-
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
-};
+import { USER_TYPES, USER_TYPES_ARRAY } from '../constants/userTypes.js';
+import { generateToken } from '../utils/jwt.js';
 
 export const register = async (userData) => {
-  const { name, email, password } = userData;
+  const { name, email, password, userType } = userData;
 
-  // Check if user already exists
+  if (userType && !USER_TYPES_ARRAY.includes(userType)) {
+    throw new BadRequestError(`Invalid user type. Must be one of: ${USER_TYPES_ARRAY.join(', ')}`);
+  }
+
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw new ConflictError('User already exists with this email');
   }
 
-  // Create new user
-  const user = await User.create({ name, email, password });
+  const user = await User.create({
+    name,
+    email,
+    password,
+    userType: userType || USER_TYPES.FARMER
+  });
 
-  // Generate token
-  const token = generateToken(user._id);
+  const token = generateToken(user._id, user.userType);
 
   return {
     user: {
       id: user._id,
       name: user.name,
-      email: user.email
+      email: user.email,
+      userType: user.userType
     },
     token
   };
 };
 
 export const login = async (email, password) => {
-  // Find user
   const user = await User.findOne({ email });
   if (!user) {
     throw new Error('Invalid email or password');
   }
 
-  // Check password
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
     throw new Error('Invalid email or password');
   }
 
-  // Generate token
-  const token = generateToken(user._id);
+  const token = generateToken(user._id, user.userType);
 
   return {
     user: {
       id: user._id,
       name: user.name,
-      email: user.email
+      email: user.email,
+      userType: user.userType
     },
     token
   };

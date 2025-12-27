@@ -28,6 +28,11 @@ const router = express.Router();
  *               password:
  *                 type: string
  *                 minLength: 6
+ *               userType:
+ *                 type: string
+ *                 enum: [farmer, buyer, admin, vendor]
+ *                 default: farmer
+ *                 description: Type of user (farmer, buyer, admin, vendor)
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -60,6 +65,30 @@ router.post('/register', authController.register);
  *     responses:
  *       200:
  *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         userType:
+ *                           type: string
+ *                           enum: [farmer, buyer, admin, vendor]
+ *                     token:
+ *                       type: string
  *       401:
  *         description: Invalid credentials
  */
