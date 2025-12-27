@@ -22,7 +22,7 @@ export const register = async (userData) => {
     userType: userType || USER_TYPES.FARMER
   });
 
-  const token = generateToken(user._id, user.userType);
+  const token = generateToken(user._id);
 
   return {
     user: {
@@ -46,7 +46,7 @@ export const login = async (email, password) => {
     throw new Error('Invalid email or password');
   }
 
-  const token = generateToken(user._id, user.userType);
+  const token = generateToken(user._id);
 
   return {
     user: {
