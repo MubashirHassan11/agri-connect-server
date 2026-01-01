@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({path: '.env.local'});
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 export default {

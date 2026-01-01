@@ -1,13 +1,13 @@
-import { sendError } from '../utils/response.js';
-import { verifyToken } from '../utils/jwt.js';
+import {sendError} from '../utils/response.js';
+import {verifyToken} from '../utils/jwt.js';
 
-const publicRoutes = ['/', '/api/auth', '/api/docs'];
+const publicRoutes = ['/api/auth', '/api/docs'];
 
 const isPublicRoute = (path) => {
   return publicRoutes.some((route) => path.startsWith(route));
 };
 
-export const globalAuth = async (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   if (isPublicRoute(req.path)) {
     return next();
   }
@@ -27,7 +27,8 @@ export const globalAuth = async (req, res, next) => {
   }
 };
 
-export const authenticate = async (req, res, next) => {
+// TODO implement admin/farmer/buyer
+export const authorize = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
 

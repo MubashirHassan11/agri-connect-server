@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { requestLogger } from './logger.middleware.js';
-import { globalAuth } from './auth.middleware.js';
+import {requestLogger} from './logger.middleware.js';
+import {authenticate} from './auth.middleware.js';
 import logger from '../utils/logger.js';
 
 const setupMiddleware = (app) => {
@@ -30,9 +30,9 @@ const setupMiddleware = (app) => {
   );
 
   app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.urlencoded({extended: true}));
   app.use(requestLogger);
-  app.use(globalAuth);
+  app.use(authenticate);
   logger.info('Middleware setup complete');
 };
 

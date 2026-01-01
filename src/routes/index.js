@@ -1,6 +1,7 @@
 import authRoutes from './auth.routes.js';
 import userRoutes from './user.routes.js';
 import productRoutes from './product.routes.js';
+// import {} from '../middlewares/auth.middleware.js';
 
 const setupRoutes = (app) => {
   app.get('/', (req, res) => {

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { USER_TYPES, USER_TYPES_ARRAY } from '../constants/userTypes.js';
+import {USER_TYPES, USER_TYPES_ARRAY} from '../constants/userTypes.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -14,6 +14,25 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
+      trim: true
+    },
+    entityName: {
+      type: String,
+      required: [true, 'Entity name is required'],
+      trim: true
+    },
+    entityAddress: {
+      type: String,
+      required: [true, 'Entity address is required'],
+      trim: true
+    },
+    gender: {
+      type: String,
+      required: [true, 'Gender is required']
+    },
+    phoneNumber: {
+      type: String,
+      required: [true, 'Phone number is required'],
       trim: true
     },
     password: {

@@ -3,7 +3,7 @@ import swaggerSpec from './swagger.js';
 import logger from '../utils/logger.js';
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 
 export const setupSwagger = (app) => {
   try {
@@ -21,7 +21,7 @@ export const setupSwagger = (app) => {
 
     app.use(
       '/api/docs',
-      express.static(__swaggerDistPath, { index: false }),
+      express.static(__swaggerDistPath, {index: false}),
       swaggerUi.serve,
       swaggerUi.setup(swaggerSpec, swaggerOptions)
     );

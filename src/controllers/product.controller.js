@@ -1,5 +1,5 @@
 import * as productService from '../services/product.service.js';
-import { sendSuccess, sendError } from '../utils/response.js';
+import {sendSuccess, sendError} from '../utils/response.js';
 
 export const createProduct = async (req, res) => {
   try {
@@ -21,7 +21,7 @@ export const getAllProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     const product = await productService.getProductById(id);
     return sendSuccess(res, product, 'Product fetched successfully');
   } catch (error) {
@@ -31,7 +31,7 @@ export const getProductById = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     const product = await productService.updateProduct(id, req.body);
     return sendSuccess(res, product, 'Product updated successfully');
   } catch (error) {
@@ -41,7 +41,7 @@ export const updateProduct = async (req, res) => {
 
 export const deleteProduct = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     await productService.deleteProduct(id);
     return sendSuccess(res, null, 'Product deleted successfully');
   } catch (error) {

@@ -11,7 +11,7 @@ setupMiddleware(app);
 setupRoutes(app);
 
 if (env.NODE_ENV === 'development') {
-  const { setupSwagger } = await import('./config/swagger.setup.js');
+  const {setupSwagger} = await import('./config/swagger.setup.js');
   setupSwagger(app);
 }
 
