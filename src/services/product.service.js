@@ -1,7 +1,7 @@
 import Product from '../models/Product.js';
-import { NotFoundError } from '../utils/errors.js';
+import {NotFoundError} from '../utils/errors.js';
 
-export const createProduct = async productData => {
+export const createProduct = async (productData) => {
   const product = await Product.create(productData);
   return product;
 };
@@ -11,7 +11,7 @@ export const getAllProducts = async () => {
   return products;
 };
 
-export const getProductById = async productId => {
+export const getProductById = async (productId) => {
   const product = await Product.findById(productId);
   if (!product) {
     throw new NotFoundError('Product not found');
@@ -30,7 +30,7 @@ export const updateProduct = async (productId, updateData) => {
   return product;
 };
 
-export const deleteProduct = async productId => {
+export const deleteProduct = async (productId) => {
   const product = await Product.findByIdAndDelete(productId);
   if (!product) {
     throw new NotFoundError('Product not found');

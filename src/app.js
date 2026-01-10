@@ -2,6 +2,7 @@ import express from 'express';
 import logger from './utils/logger.js';
 import setupMiddleware from './middlewares/app.middleware.js';
 import setupRoutes from './routes/index.js';
+import env from './config/env.js';
 
 const app = express();
 
@@ -9,7 +10,12 @@ setupMiddleware(app);
 
 setupRoutes(app);
 
-app.use((err, _, res) => {
+if (env.NODE_ENV === 'development') {
+  const {setupSwagger} = await import('./config/swagger.setup.js');
+  setupSwagger(app);
+}
+
+app.use((err, req, res, next) => {
   const status = err.status || 500;
   logger.error('Request error', {
     message: err.message,
