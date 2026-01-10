@@ -1,5 +1,5 @@
 import * as userService from '../services/user.service.js';
-import { sendSuccess, sendError } from '../utils/response.js';
+import {sendSuccess, sendError} from '../utils/response.js';
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -12,7 +12,7 @@ export const getAllUsers = async (req, res) => {
 
 export const getUserById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     const user = await userService.getUserById(id);
     return sendSuccess(res, user, 'User fetched successfully');
   } catch (error) {
