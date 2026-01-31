@@ -21,6 +21,43 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Category is required'],
       trim: true
+    },
+    farmer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Farmer is required']
+    },
+    unit: {
+      type: String,
+      default: 'kg',
+      trim: true
+    },
+    description: {
+      type: String,
+      trim: true
+    },
+    quality: {
+      type: Number,
+      min: [0, 'Quality must be between 0 and 10'],
+      max: [10, 'Quality must be between 0 and 10']
+    },
+    image: {
+      type: String,
+      trim: true
+    },
+    gallery: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function(v) {
+          return v.length <= 5;
+        },
+        message: 'Gallery can have maximum 5 images'
+      }
+    },
+    published: {
+      type: Boolean,
+      default: true
     }
   },
   {

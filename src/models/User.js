@@ -48,6 +48,50 @@ const userSchema = new mongoose.Schema(
       },
       required: [true, 'User type is required'],
       default: USER_TYPES.FARMER
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    isBlocked: {
+      type: Boolean,
+      default: false
+    },
+    lastLogin: {
+      type: Date
+    },
+    avatar: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'File'
+    },
+    location: {
+      type: String,
+      trim: true
+    },
+    zipcode: {
+      type: String,
+      trim: true
+    },
+    latitude: {
+      type: Number
+    },
+    longitude: {
+      type: Number
+    },
+    paymentDetails: {
+      accountNumber: {
+        type: String,
+        trim: true
+      },
+      accountTitle: {
+        type: String,
+        trim: true
+      },
+      bankName: {
+        type: String,
+        trim: true
+      }
     }
   },
   {
