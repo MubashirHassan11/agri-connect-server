@@ -27,7 +27,16 @@ export const register = async (userData) => {
     phoneNumber
   });
 
+  // Populate avatar to get the File reference (if exists)
+  await user.populate('avatar', '_id');
+
   const token = generateToken(user._id);
+
+  // Convert avatar ObjectId to URL for frontend
+  const userObj = user.toObject();
+  const profilePic = userObj.avatar && userObj.avatar._id 
+    ? `/api/files/${userObj.avatar._id.toString()}`
+    : undefined;
 
   return {
     user: {
@@ -38,7 +47,12 @@ export const register = async (userData) => {
       entityName: user.entityName,
       entityAddress: user.entityAddress,
       gender: user.gender,
-      phoneNumber: user.phoneNumber
+      phoneNumber: user.phoneNumber,
+      profilePic,
+      location: user.location,
+      zipcode: user.zipcode,
+      latitude: user.latitude,
+      longitude: user.longitude
     },
     token
   };
@@ -55,7 +69,30 @@ export const login = async (email, password) => {
     throw new Error('Invalid email or password');
   }
 
+  // Check if user is blocked
+  if (user.isBlocked) {
+    throw new Error('Your account has been blocked. Please contact administrator.');
+  }
+
+  // Check if user is approved (unless admin)
+  if (user.status !== 'approved' && user.userType !== 'admin') {
+    throw new Error('Your account is pending approval. Please wait for administrator approval.');
+  }
+
+  // Update last login
+  user.lastLogin = new Date();
+  await user.save();
+
+  // Populate avatar to get the File reference
+  await user.populate('avatar', '_id');
+
   const token = generateToken(user._id);
+
+  // Convert avatar ObjectId to URL for frontend
+  const userObj = user.toObject();
+  const profilePic = userObj.avatar && userObj.avatar._id 
+    ? `/api/files/${userObj.avatar._id.toString()}`
+    : undefined;
 
   return {
     user: {
@@ -66,7 +103,12 @@ export const login = async (email, password) => {
       entityName: user.entityName,
       entityAddress: user.entityAddress,
       gender: user.gender,
-      phoneNumber: user.phoneNumber
+      phoneNumber: user.phoneNumber,
+      profilePic,
+      location: user.location,
+      zipcode: user.zipcode,
+      latitude: user.latitude,
+      longitude: user.longitude
     },
     token
   };
