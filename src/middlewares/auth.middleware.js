@@ -1,7 +1,7 @@
 import {sendError} from '../utils/response.js';
 import {verifyToken} from '../utils/jwt.js';
 
-const publicRoutes = ['/api/auth', '/api/docs'];
+const publicRoutes = ['/api/auth', '/api/docs', '/api/files'];
 
 const isPublicRoute = (path) => {
   return publicRoutes.some((route) => path.startsWith(route));
