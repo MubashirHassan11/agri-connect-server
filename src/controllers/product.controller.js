@@ -3,7 +3,8 @@ import {sendSuccess, sendError} from '../utils/response.js';
 
 export const createProduct = async (req, res) => {
   try {
-    const product = await productService.createProduct(req.body);
+    const farmerId = req.user?.userId || req.user?.id;
+    const product = await productService.createProduct(req.body, farmerId);
     return sendSuccess(res, product, 'Product created successfully', 201);
   } catch (error) {
     return sendError(res, error.message, 400);
@@ -12,7 +13,25 @@ export const createProduct = async (req, res) => {
 
 export const getAllProducts = async (req, res) => {
   try {
-    const products = await productService.getAllProducts();
+    const {farmerId, published} = req.query;
+    const filters = {};
+    
+    // If user is a farmer, show their own products regardless of published status
+    if (req.user) {
+      // For authenticated farmers, allow viewing their own products
+      // For others, only show published products
+      filters.published = published !== 'false';
+    } else {
+      // For unauthenticated users, only show published products
+      filters.published = true;
+    }
+    
+    // Allow filtering by specific farmer if provided
+    if (farmerId) {
+      filters.farmerId = farmerId;
+    }
+    
+    const products = await productService.getAllProducts(filters);
     return sendSuccess(res, products, 'Products fetched successfully');
   } catch (error) {
     return sendError(res, error.message, 500);
