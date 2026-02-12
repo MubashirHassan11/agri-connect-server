@@ -8,7 +8,7 @@ import * as fileService from './file.service.js';
 const getRouteInfo = async (origin, destination, apiKey) => {
   try {
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&key=${apiKey}&units=metric`;
-    
+
     const response = await fetch(url);
     const data = await response.json();
 
@@ -17,7 +17,7 @@ const getRouteInfo = async (origin, destination, apiKey) => {
     }
 
     const element = data.rows[0].elements[0];
-    
+
     if (element.status !== 'OK') {
       throw new Error(`Route calculation failed: ${element.status}`);
     }
@@ -42,7 +42,7 @@ const getRouteInfo = async (origin, destination, apiKey) => {
 const geocodeAddress = async (address, apiKey) => {
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-    
+
     const response = await fetch(url);
     const data = await response.json();
 
@@ -66,7 +66,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Radius of the Earth in kilometers
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
+  const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
@@ -87,14 +87,14 @@ const calculateFare = (distance, vehicleRatePerKm, otherCharges = 0) => {
 };
 
 export const createShipment = async (orderId, buyerId, shipmentData, apiKey) => {
-  const { 
-    vehicleId, 
-    pickupAddress: customPickupAddress, 
+  const {
+    vehicleId,
+    pickupAddress: customPickupAddress,
     deliveryAddress: customDeliveryAddress,
     pickupCoordinates: customPickupCoordinates,
     deliveryCoordinates: customDeliveryCoordinates,
     paymentScreenshot,
-    logisticsPaymentScreenshot: altLogisticsPaymentScreenshot 
+    logisticsPaymentScreenshot: altLogisticsPaymentScreenshot
   } = shipmentData;
 
   const logisticsPaymentScreenshot = paymentScreenshot || altLogisticsPaymentScreenshot;
@@ -165,7 +165,7 @@ export const createShipment = async (orderId, buyerId, shipmentData, apiKey) => 
       const originStr = `${originCoords.latitude},${originCoords.longitude}`;
       const destStr = `${destCoords.latitude},${destCoords.longitude}`;
       const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(originStr)}&destinations=${encodeURIComponent(destStr)}&key=${apiKey}&units=metric`;
-      
+
       const response = await fetch(url);
       const data = await response.json();
 
@@ -221,7 +221,7 @@ export const createShipment = async (orderId, buyerId, shipmentData, apiKey) => 
   }
 
   const fare = calculateFare(routeInfo.distance, vehicle.ratePerKm, 0);
-  
+
   const PLATFORM_FEE_RATE = 0.02;
   const platformFeeLogistics = fare.totalFare * PLATFORM_FEE_RATE;
   const netAmountLogistics = fare.totalFare - platformFeeLogistics;
@@ -304,7 +304,11 @@ export const getBuyerShipments = async (buyerId, filters = {}) => {
   }
 
   return await Shipment.find(query)
-    .populate('order', 'product quantity totalAmount status')
+    .populate({
+      path: 'order',
+      select: '_id product quantity totalAmount logisticsPaymentStatus',
+      populate: { path: 'product', select: 'name' }
+    })
     .populate('seller', 'name email entityName entityAddress')
     .populate('logisticsPartner', 'name email entityName phoneNumber')
     .populate('vehicle', 'vehicleName vehicleNumber vehicleType ratePerKm weightCapacity unit')
@@ -320,7 +324,11 @@ export const getSellerShipments = async (sellerId, filters = {}) => {
   }
 
   return await Shipment.find(query)
-    .populate('order', 'product quantity totalAmount status')
+    .populate({
+      path: 'order',
+      select: '_id product quantity totalAmount status',
+      populate: { path: 'product', select: 'name' }
+    })
     .populate('buyer', 'name email entityName entityAddress')
     .populate('logisticsPartner', 'name email entityName phoneNumber')
     .populate('vehicle', 'vehicleName vehicleNumber vehicleType ratePerKm weightCapacity unit')
@@ -338,11 +346,62 @@ export const getAvailableShipments = async (logisticsPartnerId, filters = {}) =>
   // If status is 'all' or not provided, don't filter by status (return all shipments for this logistics partner)
 
   return await Shipment.find(query)
-    .populate('order', 'product quantity totalAmount logisticsPaymentStatus')
-    .populate('buyer', 'name email entityName entityAddress')
-    .populate('seller', 'name email entityName entityAddress')
+    .populate({
+      path: 'order',
+      select: '_id product quantity totalAmount logisticsPaymentStatus',
+      populate: { path: 'product', select: 'name' }
+    })
+    .populate('buyer', 'name email entityName entityAddress phoneNumber')
+    .populate('seller', 'name email entityName entityAddress phoneNumber')
     .populate('vehicle', 'vehicleName vehicleNumber vehicleType ratePerKm weightCapacity unit')
     .sort({ createdAt: -1 });
+};
+
+/**
+ * Logistics payout history (admin -> logistics partner)
+ */
+export const getLogisticsPayouts = async (logisticsPartnerId, filters = {}) => {
+  const { status } = filters;
+
+  const query = { logisticsPartner: logisticsPartnerId };
+
+  if (status && status !== 'all') {
+    query.adminLogisticsPaymentStatus = status;
+  } else {
+    query.adminLogisticsPaymentStatus = { $in: ['pending', 'paid'] };
+  }
+
+  const shipments = await Shipment.find(query)
+    .populate('buyer', 'name entityName phoneNumber')
+    .populate('seller', 'name entityName phoneNumber')
+    .populate('adminLogisticsPaymentScreenshot', 'filename _id')
+    .populate({
+      path: 'order',
+      select: '_id product',
+      populate: { path: 'product', select: 'name' }
+    })
+    .sort({ createdAt: -1 });
+
+  return shipments.map((shipment) => {
+    const s = shipment.toObject();
+    return {
+      _id: s._id,
+      shipmentId: s._id.toString(),
+      orderId: s.order?._id ? s.order._id.toString() : null,
+      buyer: s.buyer ? { _id: s.buyer._id, name: s.buyer.name, entityName: s.buyer.entityName } : null,
+      seller: s.seller ? { _id: s.seller._id, name: s.seller.name, entityName: s.seller.entityName } : null,
+      product: s.order?.product ? { _id: s.order.product._id, name: s.order.product.name } : null,
+      pickupAddress: s.pickupAddress,
+      deliveryAddress: s.deliveryAddress,
+      amountPaid: s.netAmountLogistics || 0,
+      platformFee: s.platformFeeLogistics || 0,
+      status: s.adminLogisticsPaymentStatus || 'pending',
+      paidAt: s.adminLogisticsPaidAt || null,
+      paymentProof: s.adminLogisticsPaymentScreenshot || null,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    };
+  });
 };
 
 export const acceptShipment = async (shipmentId, logisticsPartnerId) => {
@@ -434,14 +493,14 @@ export const updateShipmentStatus = async (shipmentId, logisticsPartnerId, newSt
   }
 
   shipment.status = newStatus;
-  
+
   if (newStatus === 'picked_up' && !shipment.actualPickupTime) {
     shipment.actualPickupTime = new Date();
   }
-  
+
   if (newStatus === 'delivered' && !shipment.actualDeliveryTime) {
     shipment.actualDeliveryTime = new Date();
-    
+
     if (shipment.vehicle) {
       const vehicle = await Vehicle.findById(shipment.vehicle._id || shipment.vehicle);
       if (vehicle) {
@@ -449,7 +508,7 @@ export const updateShipmentStatus = async (shipmentId, logisticsPartnerId, newSt
         await vehicle.save();
       }
     }
-    
+
     const order = await Order.findById(shipment.order);
     if (order && order.status === 'accepted') {
       order.status = 'shipped';
@@ -470,12 +529,18 @@ export const getAllShipments = async (filters = {}) => {
   }
 
   let shipments = await Shipment.find(query)
-    .populate('order', 'product quantity totalAmount status')
-    .populate('buyer', 'name email entityName')
-    .populate('seller', 'name email entityName')
-    .populate('logisticsPartner', 'name email entityName')
+    .populate({
+      path: 'order',
+      select: 'product quantity totalAmount status',
+      populate: {
+        path: 'product',          // populate the product inside order
+        select: 'name price', // choose fields you need from product
+      },
+    })
+    .populate('buyer', 'name email entityName phoneNumber entityAddress')
+    .populate('seller', 'name email entityName phoneNumber entityAddress')
+    .populate('logisticsPartner', 'name email entityName phoneNumber entityAddress')
     .sort({ createdAt: -1 });
-
   // Filter by search if provided
   if (search) {
     const searchLower = search.toLowerCase();
@@ -485,9 +550,9 @@ export const getAllShipments = async (filters = {}) => {
       const logisticsName = shipment.logisticsPartner?.name?.toLowerCase() || '';
       const shipmentId = shipment._id.toString().toLowerCase();
       return buyerName.includes(searchLower) ||
-             sellerName.includes(searchLower) ||
-             logisticsName.includes(searchLower) ||
-             shipmentId.includes(searchLower);
+        sellerName.includes(searchLower) ||
+        logisticsName.includes(searchLower) ||
+        shipmentId.includes(searchLower);
     });
   }
 

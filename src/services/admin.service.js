@@ -6,6 +6,7 @@ import {NotFoundError, BadRequestError} from '../utils/errors.js';
 import {USER_TYPES} from '../constants/userTypes.js';
 import * as orderService from './order.service.js';
 import * as userService from './user.service.js';
+import * as fileService from './file.service.js';
 
 /**
  * Get all signup requests (users with pending status)
@@ -312,6 +313,7 @@ export const approveLogisticsPayment = async (orderId) => {
   }
 
   shipment.paymentStatus = 'approved';
+  shipment.adminLogisticsPaymentStatus = 'pending'; // Admin now needs to pay the logistics partner
   await shipment.save();
 
   // Also update order status for tracking
@@ -437,4 +439,270 @@ export const getPlatformPaymentDetails = async () => {
     throw new NotFoundError('Platform administrator not found');
   }
   return admin.paymentDetails || {};
+};
+
+/**
+ * Get pending outgoing payments (admin needs to pay sellers and logistics)
+ */
+export const getPendingOutgoingPayments = async () => {
+  // Find orders where payment is approved but admin hasn't paid seller yet
+  // Match both documents with sellerPaymentStatus='pending' and documents without the field (legacy)
+  const sellerPayments = await Order.find({ 
+    status: { $in: ['accepted', 'shipped', 'delivered'] },
+    $or: [
+      { sellerPaymentStatus: 'pending' },
+      { sellerPaymentStatus: { $exists: false } }
+    ]
+  })
+    .populate('buyer', 'name entityName')
+    .populate('seller', 'name entityName phoneNumber paymentDetails')
+    .populate('product', 'name')
+    .sort({ updatedAt: -1 });
+
+  // Find shipments where logistics payment is approved but admin hasn't paid logistics yet
+  // Match both documents with adminLogisticsPaymentStatus='pending' and documents without the field (legacy)
+  const logisticsPayments = await Shipment.find({ 
+    paymentStatus: 'approved',
+    $or: [
+      { adminLogisticsPaymentStatus: 'pending' },
+      { adminLogisticsPaymentStatus: { $exists: false } }
+    ]
+  })
+    .populate('buyer', 'name entityName')
+    .populate('seller', 'name entityName')
+    .populate('logisticsPartner', 'name entityName phoneNumber paymentDetails')
+    .populate({
+      path: 'order',
+      populate: { path: 'product', select: 'name' }
+    })
+    .sort({ updatedAt: -1 });
+
+  // Format seller payments
+  const formattedSellerPayments = sellerPayments.map(order => {
+    const plain = order.toObject();
+    return {
+      ...plain,
+      _id: plain._id.toString(), // Ensure _id is a string
+      type: 'seller',
+      recipient: plain.seller,
+      amount: plain.netAmountSeller,
+      orderId: plain._id.toString() // Ensure orderId is a string
+    };
+  });
+
+  // Format logistics payments
+  const formattedLogisticsPayments = logisticsPayments.map(shipment => {
+    const plain = shipment.toObject();
+    return {
+      ...plain,
+      _id: plain._id.toString(), // Ensure _id is a string
+      type: 'logistics',
+      recipient: plain.logisticsPartner,
+      amount: plain.netAmountLogistics,
+      orderId: plain.order._id ? plain.order._id.toString() : undefined, // Ensure orderId is a string
+      shipmentId: plain._id.toString(), // Ensure shipmentId is a string
+      product: plain.order.product
+    };
+  });
+
+  // Combine and sort
+  const combined = [...formattedSellerPayments, ...formattedLogisticsPayments];
+  return combined.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+};
+
+/**
+ * Mark seller payment as paid
+ */
+export const markSellerPaymentPaid = async (orderId, paymentScreenshot, adminId) => {
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new NotFoundError('Order not found');
+  }
+
+  if (order.sellerPaymentStatus === 'paid') {
+    throw new BadRequestError('Payment already marked as paid');
+  }
+
+  // Handle base64 image
+  let screenshotId = paymentScreenshot;
+  if (paymentScreenshot && typeof paymentScreenshot === 'string' && paymentScreenshot.startsWith('data:image')) {
+    const file = await fileService.saveBase64Image(paymentScreenshot, {
+      createdBy: adminId,
+      purpose: 'payment',
+    });
+    screenshotId = file._id;
+  }
+
+  order.sellerPaymentStatus = 'paid';
+  order.sellerPaymentScreenshot = screenshotId;
+  order.sellerPaidAt = new Date();
+  await order.save();
+
+  return await Order.findById(orderId)
+    .populate('seller', 'name entityName')
+    .populate('product', 'name');
+};
+
+/**
+ * Mark logistics payment as paid
+ */
+export const markLogisticsPaymentPaid = async (shipmentId, paymentScreenshot, adminId) => {
+  const shipment = await Shipment.findById(shipmentId);
+  if (!shipment) {
+    throw new NotFoundError('Shipment not found');
+  }
+
+  if (shipment.adminLogisticsPaymentStatus === 'paid') {
+    throw new BadRequestError('Payment already marked as paid');
+  }
+
+  // Handle base64 image
+  let screenshotId = paymentScreenshot;
+  if (paymentScreenshot && typeof paymentScreenshot === 'string' && paymentScreenshot.startsWith('data:image')) {
+    const file = await fileService.saveBase64Image(paymentScreenshot, {
+      createdBy: adminId,
+      purpose: 'payment',
+    });
+    screenshotId = file._id;
+  }
+
+  shipment.adminLogisticsPaymentStatus = 'paid';
+  shipment.adminLogisticsPaymentScreenshot = screenshotId;
+  shipment.adminLogisticsPaidAt = new Date();
+  await shipment.save();
+
+  return await Shipment.findById(shipmentId)
+    .populate('logisticsPartner', 'name entityName')
+    .populate({
+      path: 'order',
+      populate: { path: 'product', select: 'name' }
+    });
+};
+
+/**
+ * Get all transactions (incoming deposits + outgoing payments) for ledger view
+ */
+export const getAllTransactions = async () => {
+  // 1. Incoming deposits from buyers (orders where buyer has paid)
+  const paidOrders = await Order.find({
+    status: { $in: ['accepted', 'shipped', 'delivered', 'pending_payment_approval'] },
+    paymentScreenshot: { $exists: true, $ne: null }
+  })
+    .populate('buyer', 'name entityName')
+    .populate('seller', 'name entityName')
+    .populate('product', 'name')
+    .populate('paymentScreenshot', 'filename _id')
+    .populate('sellerPaymentScreenshot', 'filename _id')
+    .sort({ createdAt: -1 });
+
+  // 2. Logistics payments from buyers
+  const paidShipments = await Shipment.find({
+    paymentStatus: { $in: ['pending', 'approved'] },
+    paymentScreenshot: { $exists: true, $ne: null }
+  })
+    .populate('buyer', 'name entityName')
+    .populate('seller', 'name entityName')
+    .populate('logisticsPartner', 'name entityName')
+    .populate('paymentScreenshot', 'filename _id')
+    .populate('adminLogisticsPaymentScreenshot', 'filename _id')
+    .populate({
+      path: 'order',
+      populate: { path: 'product', select: 'name' }
+    })
+    .sort({ createdAt: -1 });
+
+  const transactions = [];
+
+  // Map incoming order payments (buyer -> admin)
+  for (const order of paidOrders) {
+    const o = order.toObject();
+
+    // Incoming: buyer paid for order
+    transactions.push({
+      _id: `in-order-${o._id}`,
+      date: o.createdAt,
+      type: 'deposit',
+      direction: 'incoming',
+      description: `Order payment from buyer`,
+      from: o.buyer?.entityName || o.buyer?.name || 'Buyer',
+      to: 'Platform',
+      product: o.product?.name || 'Product Deleted',
+      totalAmount: o.totalAmount + (o.platformFeeBuyer || 0),
+      platformFee: (o.platformFeeBuyer || 0) + (o.platformFeeSeller || 0),
+      netAmount: o.totalAmount + (o.platformFeeBuyer || 0),
+      status: o.status === 'pending_payment_approval' ? 'pending_verification' : 'received',
+      screenshot: o.paymentScreenshot,
+      orderId: o._id.toString(),
+    });
+
+    // Outgoing: admin paid seller
+    if (o.sellerPaymentStatus === 'paid') {
+      transactions.push({
+        _id: `out-seller-${o._id}`,
+        date: o.sellerPaidAt || o.updatedAt,
+        type: 'credit',
+        direction: 'outgoing',
+        description: `Payment to seller`,
+        from: 'Platform',
+        to: o.seller?.entityName || o.seller?.name || 'Seller',
+        product: o.product?.name || 'Product Deleted',
+        totalAmount: o.netAmountSeller,
+        platformFee: o.platformFeeSeller || 0,
+        netAmount: o.netAmountSeller,
+        status: 'paid',
+        screenshot: o.sellerPaymentScreenshot,
+        orderId: o._id.toString(),
+      });
+    }
+  }
+
+  // Map incoming logistics payments (buyer -> admin)
+  for (const shipment of paidShipments) {
+    const s = shipment.toObject();
+
+    // Incoming: buyer paid for logistics
+    transactions.push({
+      _id: `in-logistics-${s._id}`,
+      date: s.createdAt,
+      type: 'deposit',
+      direction: 'incoming',
+      description: `Logistics payment from buyer`,
+      from: s.buyer?.entityName || s.buyer?.name || 'Buyer',
+      to: 'Platform',
+      product: s.order?.product?.name || 'Shipment',
+      totalAmount: s.totalFare,
+      platformFee: s.platformFeeLogistics || 0,
+      netAmount: s.totalFare,
+      status: s.paymentStatus === 'approved' ? 'received' : 'pending_verification',
+      screenshot: s.paymentScreenshot,
+      orderId: s.order?._id?.toString(),
+      shipmentId: s._id.toString(),
+    });
+
+    // Outgoing: admin paid logistics partner
+    if (s.adminLogisticsPaymentStatus === 'paid') {
+      transactions.push({
+        _id: `out-logistics-${s._id}`,
+        date: s.adminLogisticsPaidAt || s.updatedAt,
+        type: 'credit',
+        direction: 'outgoing',
+        description: `Payment to logistics partner`,
+        from: 'Platform',
+        to: s.logisticsPartner?.entityName || s.logisticsPartner?.name || 'Logistics',
+        product: s.order?.product?.name || 'Shipment',
+        totalAmount: s.netAmountLogistics,
+        platformFee: s.platformFeeLogistics || 0,
+        netAmount: s.netAmountLogistics,
+        status: 'paid',
+        screenshot: s.adminLogisticsPaymentScreenshot,
+        orderId: s.order?._id?.toString(),
+        shipmentId: s._id.toString(),
+      });
+    }
+  }
+
+  // Sort all transactions by date descending
+  transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  return transactions;
 };

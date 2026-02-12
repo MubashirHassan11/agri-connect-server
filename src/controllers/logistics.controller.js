@@ -133,3 +133,17 @@ export const getAllShipments = async (req, res) => {
   }
 };
 
+/**
+ * Get logistics partner payouts (money received from admin)
+ */
+export const getLogisticsPayouts = async (req, res) => {
+  try {
+    const logisticsPartnerId = req.user?.userId || req.user?.id;
+    const { status } = req.query;
+    const payouts = await logisticsService.getLogisticsPayouts(logisticsPartnerId, { status });
+    return sendSuccess(res, payouts, 'Payouts fetched successfully');
+  } catch (error) {
+    return sendError(res, error.message, error.status || 400);
+  }
+};
+

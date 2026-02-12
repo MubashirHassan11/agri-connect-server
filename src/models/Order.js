@@ -68,6 +68,19 @@ const orderSchema = new mongoose.Schema(
     paymentScreenshot: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'File'
+    },
+    // Admin to Seller payment tracking
+    sellerPaymentStatus: {
+      type: String,
+      enum: ['pending', 'paid'],
+      default: 'pending'
+    },
+    sellerPaymentScreenshot: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'File'
+    },
+    sellerPaidAt: {
+      type: Date
     }
   },
   {
