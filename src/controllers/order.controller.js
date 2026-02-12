@@ -110,3 +110,17 @@ export const markOrderAsDelivered = async (req, res) => {
   }
 };
 
+/**
+ * Get seller payouts (money received from admin)
+ */
+export const getSellerPayouts = async (req, res) => {
+  try {
+    const sellerId = req.user?.userId || req.user?.id;
+    const { status } = req.query;
+    const payouts = await orderService.getSellerPayouts(sellerId, { status });
+    return sendSuccess(res, payouts, 'Payouts fetched successfully');
+  } catch (error) {
+    return sendError(res, error.message, error.status || 500);
+  }
+};
+
