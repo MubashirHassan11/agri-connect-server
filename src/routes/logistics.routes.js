@@ -45,6 +45,14 @@ router.get(
   logisticsController.getAvailableShipments
 );
 
+// Logistics partner payouts (admin -> logistics partner) - must come before /shipments/:id
+router.get(
+  '/shipments/payouts',
+  authenticate,
+  authorize(['logisctics']),
+  logisticsController.getLogisticsPayouts
+);
+
 // Get shipment by ID - must come after all specific routes
 router.get(
   '/shipments/:id',

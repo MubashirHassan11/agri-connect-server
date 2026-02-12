@@ -14,6 +14,14 @@ router.get('/buyer', orderController.getBuyerOrders);
 // Get seller orders
 router.get('/seller', orderController.getSellerOrders);
 
+// Seller payouts (admin -> seller)
+router.get(
+  '/seller/payouts',
+  authenticate,
+  authorize(['seller']),
+  orderController.getSellerPayouts
+);
+
 // Get all orders (admin)
 router.get('/all', orderController.getAllOrders);
 
