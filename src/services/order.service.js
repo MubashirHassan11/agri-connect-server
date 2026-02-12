@@ -117,6 +117,45 @@ export const getSellerOrders = async (sellerId, filters = {}) => {
   return orders;
 };
 
+/**
+ * Seller payout history (admin -> seller)
+ */
+export const getSellerPayouts = async (sellerId, filters = {}) => {
+  const { status } = filters;
+
+  const query = { seller: sellerId };
+
+  // Only show orders that are in the seller payout lifecycle
+  if (status && status !== 'all') {
+    query.sellerPaymentStatus = status;
+  } else {
+    query.sellerPaymentStatus = { $in: ['pending', 'paid'] };
+  }
+
+  const orders = await Order.find(query)
+    .populate('buyer', 'name entityName')
+    .populate('product', 'name')
+    .populate('sellerPaymentScreenshot', 'filename _id')
+    .sort({ createdAt: -1 });
+
+  return orders.map((order) => {
+    const o = order.toObject();
+    return {
+      _id: o._id,
+      orderId: o._id.toString(),
+      buyer: o.buyer ? { _id: o.buyer._id, name: o.buyer.name, entityName: o.buyer.entityName } : null,
+      product: o.product ? { _id: o.product._id, name: o.product.name } : null,
+      amountPaid: o.netAmountSeller || 0,
+      platformFee: o.platformFeeSeller || 0,
+      status: o.sellerPaymentStatus || 'pending',
+      paidAt: o.sellerPaidAt || null,
+      paymentProof: o.sellerPaymentScreenshot || null,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+    };
+  });
+};
+
 export const getAllOrders = async (filters = {}) => {
   const {status, search} = filters;
   const query = {};
@@ -299,6 +338,7 @@ export const adminApprovePayment = async (orderId) => {
 
   // Combined action: Mark as accepted and reduce inventory
   order.status = 'accepted';
+  order.sellerPaymentStatus = 'pending'; // Admin now needs to pay the seller
   await order.save();
 
   product.quantity -= order.quantity;

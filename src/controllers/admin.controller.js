@@ -182,3 +182,67 @@ export const getPlatformPaymentDetails = async (req, res) => {
     return sendError(res, error.message, error.status || 500);
   }
 };
+
+/**
+ * Get pending outgoing payments
+ */
+export const getPendingOutgoingPayments = async (req, res) => {
+  try {
+    const payments = await adminService.getPendingOutgoingPayments();
+    return sendSuccess(res, payments, 'Pending outgoing payments fetched successfully');
+  } catch (error) {
+    return sendError(res, error.message, error.status || 500);
+  }
+};
+
+/**
+ * Mark seller payment as paid
+ */
+export const markSellerPaymentPaid = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentScreenshot } = req.body;
+    const adminId = req.user?.userId || req.user?.id;
+    
+    if (!paymentScreenshot) {
+      return sendError(res, 'Payment screenshot is required', 400);
+    }
+    
+    const result = await adminService.markSellerPaymentPaid(id, paymentScreenshot, adminId);
+    return sendSuccess(res, result, 'Seller payment marked as paid successfully');
+  } catch (error) {
+    return sendError(res, error.message, error.status || 400);
+  }
+};
+
+/**
+ * Mark logistics payment as paid
+ */
+export const markLogisticsPaymentPaid = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentScreenshot } = req.body;
+    const adminId = req.user?.userId || req.user?.id;
+    
+    if (!paymentScreenshot) {
+      return sendError(res, 'Payment screenshot is required', 400);
+    }
+    
+    const result = await adminService.markLogisticsPaymentPaid(id, paymentScreenshot, adminId);
+    return sendSuccess(res, result, 'Logistics payment marked as paid successfully');
+  } catch (error) {
+    return sendError(res, error.message, error.status || 400);
+  }
+};
+
+/**
+ * Get all transactions (ledger view)
+ */
+export const getAllTransactions = async (req, res) => {
+  try {
+    const transactions = await adminService.getAllTransactions();
+    return sendSuccess(res, transactions, 'Transactions fetched successfully');
+  } catch (error) {
+    return sendError(res, error.message, error.status || 500);
+  }
+};

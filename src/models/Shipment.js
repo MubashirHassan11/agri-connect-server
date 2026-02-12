@@ -120,6 +120,19 @@ const shipmentSchema = new mongoose.Schema(
     paymentScreenshot: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'File'
+    },
+    // Admin to Logistics payment tracking
+    adminLogisticsPaymentStatus: {
+      type: String,
+      enum: ['pending', 'paid'],
+      default: 'pending'
+    },
+    adminLogisticsPaymentScreenshot: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'File'
+    },
+    adminLogisticsPaidAt: {
+      type: Date
     }
   },
   {
