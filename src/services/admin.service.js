@@ -25,10 +25,8 @@ export const getSignupRequests = async (filters = {}) => {
     query.status = status;
   }
 
-  const requests = await User.find(query)
-    .select('-password')
-    .sort({createdAt: -1});
-  
+  const requests = await User.find(query).select('-password').sort({createdAt: -1});
+
   return requests;
 };
 
@@ -87,13 +85,13 @@ export const rejectSignupRequest = async (userId) => {
  */
 export const getAllUsers = async (filters = {}) => {
   const {userType, status, search} = filters;
-  
+
   const query = {};
-  
+
   if (userType && userType !== 'all') {
     query.userType = userType;
   }
-  
+
   if (status && status !== 'all') {
     if (status === 'active') {
       query.isBlocked = false;
@@ -110,10 +108,8 @@ export const getAllUsers = async (filters = {}) => {
     ];
   }
 
-  const users = await User.find(query)
-    .select('-password')
-    .sort({createdAt: -1});
-  
+  const users = await User.find(query).select('-password').sort({createdAt: -1});
+
   return users;
 };
 
@@ -181,8 +177,8 @@ export const getDashboardStats = async () => {
   });
   const totalProducts = await Product.countDocuments();
 
-  const completedOrders = await Order.countDocuments({ status: 'delivered' });
-  
+  const completedOrders = await Order.countDocuments({status: 'delivered'});
+
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -192,7 +188,7 @@ export const getDashboardStats = async () => {
   });
 
   const revenueFromOrders = await Order.aggregate([
-    { $match: { status: 'delivered' } },
+    {$match: {status: 'delivered'}},
     {
       $group: {
         _id: null,
@@ -206,11 +202,11 @@ export const getDashboardStats = async () => {
   ]);
 
   const revenueFromShipments = await Shipment.aggregate([
-    { $match: { status: 'delivered' } },
+    {$match: {status: 'delivered'}},
     {
       $group: {
         _id: null,
-        total: { $sum: '$platformFeeLogistics' }
+        total: {$sum: '$platformFeeLogistics'}
       }
     }
   ]);
@@ -264,21 +260,21 @@ export const getDashboardStats = async () => {
  * Get recent revenue from delivered orders
  */
 export const getRecentRevenue = async (limit = 10) => {
-  const recentOrders = await Order.find({ status: 'delivered' })
+  const recentOrders = await Order.find({status: 'delivered'})
     .populate('buyer', 'name entityName')
     .populate('seller', 'name entityName')
-    .sort({ updatedAt: -1 })
+    .sort({updatedAt: -1})
     .limit(limit);
 
   const revenueData = await Promise.all(
     recentOrders.map(async (order) => {
-      const shipment = await Shipment.findOne({ order: order._id }).select('platformFeeLogistics');
+      const shipment = await Shipment.findOne({order: order._id}).select('platformFeeLogistics');
       const logisticsFee = shipment ? shipment.platformFeeLogistics : 0;
-      
-      const totalCommission = (order.platformFeeBuyer || 0) + (order.platformFeeSeller || 0) + logisticsFee;
-      const commissionPercentage = order.totalAmount > 0 
-        ? ((totalCommission / order.totalAmount) * 100).toFixed(1)
-        : '0.0';
+
+      const totalCommission =
+        (order.platformFeeBuyer || 0) + (order.platformFeeSeller || 0) + logisticsFee;
+      const commissionPercentage =
+        order.totalAmount > 0 ? ((totalCommission / order.totalAmount) * 100).toFixed(1) : '0.0';
 
       return {
         id: order._id.toString(),
@@ -288,7 +284,7 @@ export const getRecentRevenue = async (limit = 10) => {
         seller: order.seller?.entityName || order.seller?.name || 'Unknown Seller',
         buyer: order.buyer?.entityName || order.buyer?.name || 'Unknown Buyer',
         date: order.updatedAt || order.createdAt,
-        percentage: `${commissionPercentage}%`,
+        percentage: `${commissionPercentage}%`
       };
     })
   );
@@ -307,7 +303,7 @@ export const approveOrderPayment = async (orderId) => {
  * Approve logistics payment
  */
 export const approveLogisticsPayment = async (orderId) => {
-  const shipment = await Shipment.findOne({ order: orderId });
+  const shipment = await Shipment.findOne({order: orderId});
   if (!shipment) {
     throw new NotFoundError('Shipment not found for this order');
   }
@@ -330,7 +326,7 @@ export const approveLogisticsPayment = async (orderId) => {
  * Reject logistics payment and cancel shipment
  */
 export const rejectLogisticsPayment = async (orderId) => {
-  const shipment = await Shipment.findOne({ order: orderId });
+  const shipment = await Shipment.findOne({order: orderId});
   if (!shipment) {
     throw new NotFoundError('Shipment not found for this order');
   }
@@ -367,7 +363,7 @@ export const rejectOrder = async (orderId) => {
   const order = await orderService.adminRejectOrder(orderId);
 
   // If there's a related shipment, cancel it and release vehicle
-  const shipment = await Shipment.findOne({ order: orderId });
+  const shipment = await Shipment.findOne({order: orderId});
   if (shipment) {
     if (shipment.vehicle) {
       const Vehicle = (await import('../models/Vehicle.js')).default;
@@ -388,28 +384,28 @@ export const rejectOrder = async (orderId) => {
  * Get orders and shipments pending payment approval
  */
 export const getPendingPayments = async () => {
-  const pendingOrders = await Order.find({ status: 'pending_payment_approval' })
-    .populate('buyer', 'name entityName')
-    .populate('seller', 'name entityName')
+  const pendingOrders = await Order.find({status: 'pending_payment_approval'})
+    .populate('buyer', 'name entityName phoneNumber')
+    .populate('seller', 'name entityName phoneNumber')
     .populate('product', 'name')
     .populate('paymentScreenshot', 'filename _id')
-    .sort({ updatedAt: -1 });
+    .sort({updatedAt: -1});
 
-  const pendingShipments = await Shipment.find({ 
-    status: { $nin: ['inactive', 'cancelled'] },
-    paymentStatus: { $in: ['pending'] } 
+  const pendingShipments = await Shipment.find({
+    status: {$nin: ['inactive', 'cancelled']},
+    paymentStatus: {$in: ['pending']}
   })
     .populate('buyer', 'name entityName')
     .populate('seller', 'name entityName')
     .populate({
       path: 'order',
-      populate: { path: 'product', select: 'name' }
+      populate: {path: 'product', select: 'name'}
     })
     .populate('paymentScreenshot', 'filename _id')
-    .sort({ updatedAt: -1 });
+    .sort({updatedAt: -1});
 
   // Map shipments to look like order records for the frontend
-  const mappedShipments = pendingShipments.map(s => {
+  const mappedShipments = pendingShipments.map((s) => {
     const plain = s.toObject();
     return {
       ...plain,
@@ -426,7 +422,7 @@ export const getPendingPayments = async () => {
   });
 
   // Combine and sort by date
-  const combined = [...pendingOrders.map(o => o.toObject()), ...mappedShipments];
+  const combined = [...pendingOrders.map((o) => o.toObject()), ...mappedShipments];
   return combined.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 };
 
@@ -434,7 +430,7 @@ export const getPendingPayments = async () => {
  * Get platform (admin) payment details
  */
 export const getPlatformPaymentDetails = async () => {
-  const admin = await User.findOne({ userType: USER_TYPES.ADMIN }).select('paymentDetails');
+  const admin = await User.findOne({userType: USER_TYPES.ADMIN}).select('paymentDetails');
   if (!admin) {
     throw new NotFoundError('Platform administrator not found');
   }
@@ -447,38 +443,32 @@ export const getPlatformPaymentDetails = async () => {
 export const getPendingOutgoingPayments = async () => {
   // Find orders where payment is approved but admin hasn't paid seller yet
   // Match both documents with sellerPaymentStatus='pending' and documents without the field (legacy)
-  const sellerPayments = await Order.find({ 
-    status: { $in: ['accepted', 'shipped', 'delivered'] },
-    $or: [
-      { sellerPaymentStatus: 'pending' },
-      { sellerPaymentStatus: { $exists: false } }
-    ]
+  const sellerPayments = await Order.find({
+    status: {$in: ['accepted', 'shipped', 'delivered']},
+    $or: [{sellerPaymentStatus: 'pending'}, {sellerPaymentStatus: {$exists: false}}]
   })
     .populate('buyer', 'name entityName')
     .populate('seller', 'name entityName phoneNumber paymentDetails')
     .populate('product', 'name')
-    .sort({ updatedAt: -1 });
+    .sort({updatedAt: -1});
 
   // Find shipments where logistics payment is approved but admin hasn't paid logistics yet
   // Match both documents with adminLogisticsPaymentStatus='pending' and documents without the field (legacy)
-  const logisticsPayments = await Shipment.find({ 
+  const logisticsPayments = await Shipment.find({
     paymentStatus: 'approved',
-    $or: [
-      { adminLogisticsPaymentStatus: 'pending' },
-      { adminLogisticsPaymentStatus: { $exists: false } }
-    ]
+    $or: [{adminLogisticsPaymentStatus: 'pending'}, {adminLogisticsPaymentStatus: {$exists: false}}]
   })
     .populate('buyer', 'name entityName')
     .populate('seller', 'name entityName')
     .populate('logisticsPartner', 'name entityName phoneNumber paymentDetails')
     .populate({
       path: 'order',
-      populate: { path: 'product', select: 'name' }
+      populate: {path: 'product', select: 'name'}
     })
-    .sort({ updatedAt: -1 });
+    .sort({updatedAt: -1});
 
   // Format seller payments
-  const formattedSellerPayments = sellerPayments.map(order => {
+  const formattedSellerPayments = sellerPayments.map((order) => {
     const plain = order.toObject();
     return {
       ...plain,
@@ -491,7 +481,7 @@ export const getPendingOutgoingPayments = async () => {
   });
 
   // Format logistics payments
-  const formattedLogisticsPayments = logisticsPayments.map(shipment => {
+  const formattedLogisticsPayments = logisticsPayments.map((shipment) => {
     const plain = shipment.toObject();
     return {
       ...plain,
@@ -525,10 +515,14 @@ export const markSellerPaymentPaid = async (orderId, paymentScreenshot, adminId)
 
   // Handle base64 image
   let screenshotId = paymentScreenshot;
-  if (paymentScreenshot && typeof paymentScreenshot === 'string' && paymentScreenshot.startsWith('data:image')) {
+  if (
+    paymentScreenshot &&
+    typeof paymentScreenshot === 'string' &&
+    paymentScreenshot.startsWith('data:image')
+  ) {
     const file = await fileService.saveBase64Image(paymentScreenshot, {
       createdBy: adminId,
-      purpose: 'payment',
+      purpose: 'payment'
     });
     screenshotId = file._id;
   }
@@ -558,10 +552,14 @@ export const markLogisticsPaymentPaid = async (shipmentId, paymentScreenshot, ad
 
   // Handle base64 image
   let screenshotId = paymentScreenshot;
-  if (paymentScreenshot && typeof paymentScreenshot === 'string' && paymentScreenshot.startsWith('data:image')) {
+  if (
+    paymentScreenshot &&
+    typeof paymentScreenshot === 'string' &&
+    paymentScreenshot.startsWith('data:image')
+  ) {
     const file = await fileService.saveBase64Image(paymentScreenshot, {
       createdBy: adminId,
-      purpose: 'payment',
+      purpose: 'payment'
     });
     screenshotId = file._id;
   }
@@ -575,7 +573,7 @@ export const markLogisticsPaymentPaid = async (shipmentId, paymentScreenshot, ad
     .populate('logisticsPartner', 'name entityName')
     .populate({
       path: 'order',
-      populate: { path: 'product', select: 'name' }
+      populate: {path: 'product', select: 'name'}
     });
 };
 
@@ -585,20 +583,20 @@ export const markLogisticsPaymentPaid = async (shipmentId, paymentScreenshot, ad
 export const getAllTransactions = async () => {
   // 1. Incoming deposits from buyers (orders where buyer has paid)
   const paidOrders = await Order.find({
-    status: { $in: ['accepted', 'shipped', 'delivered', 'pending_payment_approval'] },
-    paymentScreenshot: { $exists: true, $ne: null }
+    status: {$in: ['accepted', 'shipped', 'delivered', 'pending_payment_approval']},
+    paymentScreenshot: {$exists: true, $ne: null}
   })
     .populate('buyer', 'name entityName')
     .populate('seller', 'name entityName')
     .populate('product', 'name')
     .populate('paymentScreenshot', 'filename _id')
     .populate('sellerPaymentScreenshot', 'filename _id')
-    .sort({ createdAt: -1 });
+    .sort({createdAt: -1});
 
   // 2. Logistics payments from buyers
   const paidShipments = await Shipment.find({
-    paymentStatus: { $in: ['pending', 'approved'] },
-    paymentScreenshot: { $exists: true, $ne: null }
+    paymentStatus: {$in: ['pending', 'approved']},
+    paymentScreenshot: {$exists: true, $ne: null}
   })
     .populate('buyer', 'name entityName')
     .populate('seller', 'name entityName')
@@ -607,9 +605,9 @@ export const getAllTransactions = async () => {
     .populate('adminLogisticsPaymentScreenshot', 'filename _id')
     .populate({
       path: 'order',
-      populate: { path: 'product', select: 'name' }
+      populate: {path: 'product', select: 'name'}
     })
-    .sort({ createdAt: -1 });
+    .sort({createdAt: -1});
 
   const transactions = [];
 
@@ -632,7 +630,7 @@ export const getAllTransactions = async () => {
       netAmount: o.totalAmount + (o.platformFeeBuyer || 0),
       status: o.status === 'pending_payment_approval' ? 'pending_verification' : 'received',
       screenshot: o.paymentScreenshot,
-      orderId: o._id.toString(),
+      orderId: o._id.toString()
     });
 
     // Outgoing: admin paid seller
@@ -651,7 +649,7 @@ export const getAllTransactions = async () => {
         netAmount: o.netAmountSeller,
         status: 'paid',
         screenshot: o.sellerPaymentScreenshot,
-        orderId: o._id.toString(),
+        orderId: o._id.toString()
       });
     }
   }
@@ -676,7 +674,7 @@ export const getAllTransactions = async () => {
       status: s.paymentStatus === 'approved' ? 'received' : 'pending_verification',
       screenshot: s.paymentScreenshot,
       orderId: s.order?._id?.toString(),
-      shipmentId: s._id.toString(),
+      shipmentId: s._id.toString()
     });
 
     // Outgoing: admin paid logistics partner
@@ -696,7 +694,7 @@ export const getAllTransactions = async () => {
         status: 'paid',
         screenshot: s.adminLogisticsPaymentScreenshot,
         orderId: s.order?._id?.toString(),
-        shipmentId: s._id.toString(),
+        shipmentId: s._id.toString()
       });
     }
   }
