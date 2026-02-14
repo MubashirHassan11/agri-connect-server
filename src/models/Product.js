@@ -17,6 +17,11 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Quantity is required'],
       min: [0, 'Quantity must be positive']
     },
+    minPurchase: {
+      type: Number,
+      default: 1,
+      min: [1, 'Minimum purchase must be at least 1']
+    },
     category: {
       type: String,
       required: [true, 'Category is required'],
