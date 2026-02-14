@@ -42,7 +42,7 @@ const formatMessage = (level, message, data = null) => {
 const logger = {
   error: (message, data = null) => {
     if (currentLogLevel >= LOG_LEVELS.ERROR) {
-      console.error(formatMessage(LOG_LEVELS.ERROR, message, data));
+      console.error(formatMessage(LOG_LEVELS.ERROR, message, {message: data?.message}));
     }
   },
 
