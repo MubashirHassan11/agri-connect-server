@@ -49,8 +49,22 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending_payment_approval', 'payment_approved', 'accepted', 'rejected', 'confirmed', 'shipped', 'delivered', 'cancelled'],
-      default: 'pending_payment_approval'
+      enum: ['pending_seller_approval', 'awaiting_payment', 'pending_payment_approval', 'payment_approved', 'accepted', 'rejected', 'confirmed', 'shipped', 'delivered', 'cancelled'],
+      default: 'pending_seller_approval'
+    },
+    deliveryFee: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    deliveryVehicle: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vehicle'
+    },
+    deliveryDistance: {
+      type: Number,
+      default: 0,
+      min: 0
     },
     logisticsPaymentStatus: {
       type: String,

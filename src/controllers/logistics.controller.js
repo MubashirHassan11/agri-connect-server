@@ -3,7 +3,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 
 export const createShipment = async (req, res) => {
   try {
-    const buyerId = req.user?.userId || req.user?.id;
+    const sellerId = req.user?.userId || req.user?.id;
     const { orderId } = req.params;
     const { 
       vehicleId, 
@@ -25,7 +25,7 @@ export const createShipment = async (req, res) => {
 
     const shipment = await logisticsService.createShipment(
       orderId,
-      buyerId,
+      sellerId,
       req.body,
       apiKey
     );

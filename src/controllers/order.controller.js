@@ -111,6 +111,21 @@ export const markOrderAsDelivered = async (req, res) => {
 };
 
 /**
+ * Buyer submits payment for an order (after seller accepts)
+ */
+export const submitPayment = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const buyerId = req.user?.userId || req.user?.id;
+    const {paymentScreenshot} = req.body;
+    const order = await orderService.submitPayment(id, buyerId, paymentScreenshot);
+    return sendSuccess(res, order, 'Payment submitted successfully');
+  } catch (error) {
+    return sendError(res, error.message, error.status || 400);
+  }
+};
+
+/**
  * Get seller payouts (money received from admin)
  */
 export const getSellerPayouts = async (req, res) => {

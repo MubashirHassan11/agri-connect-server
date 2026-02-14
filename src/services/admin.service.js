@@ -396,8 +396,8 @@ export const getPendingPayments = async () => {
     .sort({ updatedAt: -1 });
 
   const pendingShipments = await Shipment.find({ 
-    status: 'pending',
-    paymentStatus: { $in: ['pending', 'none'] } 
+    status: { $nin: ['inactive', 'cancelled'] },
+    paymentStatus: { $in: ['pending'] } 
   })
     .populate('buyer', 'name entityName')
     .populate('seller', 'name entityName')

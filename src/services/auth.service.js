@@ -155,9 +155,6 @@ export const register = async (userData) => {
   // Populate avatar to get the File reference (if exists)
   await user.populate('avatar', '_id');
 
-  // Populate avatar to get the File reference (if exists)
-  await user.populate('avatar', '_id');
-
   const token = generateToken(user._id);
 
   // Convert avatar ObjectId to URL for frontend
