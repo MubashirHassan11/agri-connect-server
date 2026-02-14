@@ -9,5 +9,8 @@ export default {
   MONGO_URI: process.env.MONGO_URI,
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
-  LOG_LEVEL: process.env.LOG_LEVEL?.toUpperCase() || (NODE_ENV === 'production' ? 'INFO' : 'DEBUG')
+  JWT_PASSWORD_RESET_SECRET: process.env.JWT_PASSWORD_RESET_SECRET,
+  LOG_LEVEL: process.env.LOG_LEVEL?.toUpperCase() || (NODE_ENV === 'production' ? 'INFO' : 'DEBUG'),
+  FRONT_URL: process.env.FRONT_URL,
+  RESEND_API_KEY: process.env.RESEND_API_KEY
 };
