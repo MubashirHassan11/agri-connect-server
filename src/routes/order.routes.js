@@ -28,6 +28,14 @@ router.get('/all', orderController.getAllOrders);
 // Get order by ID
 router.get('/:id', orderController.getOrderById);
 
+// Buyer submits payment for an accepted order
+router.post(
+  '/:id/submit-payment',
+  authenticate,
+  authorize(['buyer']),
+  orderController.submitPayment
+);
+
 // Accept order
 router.post('/:id/accept', orderController.acceptOrder);
 

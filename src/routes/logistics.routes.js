@@ -5,11 +5,11 @@ import { authorize } from '../middlewares/authorize.middleware.js';
 
 const router = express.Router();
 
-// Create shipment (buyer only)
+// Create shipment (seller only)
 router.post(
   '/orders/:orderId/shipment',
   authenticate,
-  authorize(['buyer']),
+  authorize(['seller']),
   logisticsController.createShipment
 );
 

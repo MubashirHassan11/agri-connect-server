@@ -12,6 +12,9 @@ router.post('/items', cartController.addOrUpdateItem);
 // Remove item from cart
 router.delete('/items/:productId', cartController.removeItem);
 
+// Estimate delivery fee
+router.get('/estimate-delivery', cartController.estimateDeliveryFee);
+
 // Checkout
 router.post('/checkout', cartController.checkout);
 

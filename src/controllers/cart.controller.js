@@ -35,9 +35,18 @@ export const removeItem = async (req, res) => {
 export const checkout = async (req, res) => {
   try {
     const buyerId = req.user?.userId || req.user?.id;
-    const { paymentScreenshot } = req.body;
-    const orders = await cartService.checkout(buyerId, paymentScreenshot);
+    const orders = await cartService.checkout(buyerId);
     return sendSuccess(res, orders, 'Checkout successful');
+  } catch (error) {
+    return sendError(res, error.message, error.status || 400);
+  }
+};
+
+export const estimateDeliveryFee = async (req, res) => {
+  try {
+    const buyerId = req.user?.userId || req.user?.id;
+    const estimate = await cartService.estimateDeliveryFee(buyerId);
+    return sendSuccess(res, estimate, 'Delivery fee estimated successfully');
   } catch (error) {
     return sendError(res, error.message, error.status || 400);
   }

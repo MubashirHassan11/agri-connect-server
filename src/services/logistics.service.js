@@ -86,7 +86,7 @@ const calculateFare = (distance, vehicleRatePerKm, otherCharges = 0) => {
   };
 };
 
-export const createShipment = async (orderId, buyerId, shipmentData, apiKey) => {
+export const createShipment = async (orderId, sellerId, shipmentData, apiKey) => {
   const {
     vehicleId,
     pickupAddress: customPickupAddress,
@@ -112,7 +112,7 @@ export const createShipment = async (orderId, buyerId, shipmentData, apiKey) => 
     throw new NotFoundError('Order not found');
   }
 
-  if (order.buyer._id.toString() !== buyerId) {
+  if (order.seller._id.toString() !== sellerId) {
     throw new BadRequestError('Unauthorized');
   }
 
@@ -232,7 +232,7 @@ export const createShipment = async (orderId, buyerId, shipmentData, apiKey) => 
 
   if (logisticsPaymentScreenshot && typeof logisticsPaymentScreenshot === 'string' && logisticsPaymentScreenshot.startsWith('data:image')) {
     const file = await fileService.saveBase64Image(logisticsPaymentScreenshot, {
-      createdBy: buyerId,
+      createdBy: sellerId,
       purpose: 'payment',
     });
     savedPaymentScreenshot = file._id;
@@ -241,7 +241,7 @@ export const createShipment = async (orderId, buyerId, shipmentData, apiKey) => 
 
   const shipment = await Shipment.create({
     order: orderId,
-    buyer: buyerId,
+    buyer: order.buyer._id,
     seller: order.seller._id,
     logisticsPartner: vehicle.logisticsPartner._id,
     vehicle: vehicleId,
@@ -342,8 +342,10 @@ export const getAvailableShipments = async (logisticsPartnerId, filters = {}) =>
   // Only filter by status if explicitly provided and not 'all'
   if (status && status !== 'all') {
     query.status = status;
+  } else {
+    // By default, exclude 'inactive' shipments (they are not yet visible to logistics)
+    query.status = { $ne: 'inactive' };
   }
-  // If status is 'all' or not provided, don't filter by status (return all shipments for this logistics partner)
 
   return await Shipment.find(query)
     .populate({

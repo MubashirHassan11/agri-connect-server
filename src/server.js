@@ -10,5 +10,6 @@ import logger from './utils/logger.js';
 
   app.listen(env.PORT, () => {
     logger.info(`Server [${env.NODE_ENV}] is running on port ${env.PORT}`);
+    logger.info(`API URL: http://localhost:${env.PORT}`);
   });
 })();

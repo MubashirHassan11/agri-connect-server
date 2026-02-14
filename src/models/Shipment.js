@@ -93,8 +93,8 @@ const shipmentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'assigned', 'picked_up', 'in_transit', 'delivered', 'cancelled'],
-      default: 'pending'
+      enum: ['inactive', 'pending', 'assigned', 'picked_up', 'in_transit', 'delivered', 'cancelled'],
+      default: 'inactive'
     },
     estimatedPickupTime: {
       type: Date
