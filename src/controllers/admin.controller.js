@@ -1,4 +1,6 @@
 import * as adminService from '../services/admin.service.js';
+import * as emailService from '../services/email.service.js';
+
 import {sendSuccess, sendError} from '../utils/response.js';
 
 /**
@@ -32,7 +34,12 @@ export const getSignupRequests = async (req, res) => {
 export const approveSignupRequest = async (req, res) => {
   try {
     const {id} = req.params;
+    const {notify, email, name} = req.body;
     const result = await adminService.approveSignupRequest(id);
+    if (notify) {
+      await emailService.sendOnboardingEmail(email, name);
+      return sendSuccess(res, result, 'Approved and notified');
+    }
     return sendSuccess(res, result, 'Signup request approved successfully');
   } catch (error) {
     return sendError(res, error.message, error.status || 400);
@@ -104,9 +111,6 @@ export const getRecentRevenue = async (req, res) => {
   }
 };
 
-
-
-
 /**
  * Get all orders/shipments pending payment approval
  */
@@ -124,7 +128,7 @@ export const getPendingPayments = async (req, res) => {
  */
 export const approveOrderPayment = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     const result = await adminService.approveOrderPayment(id);
     return sendSuccess(res, result, 'Order payment approved successfully');
   } catch (error) {
@@ -137,7 +141,7 @@ export const approveOrderPayment = async (req, res) => {
  */
 export const approveLogisticsPayment = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     const result = await adminService.approveLogisticsPayment(id);
     return sendSuccess(res, result, 'Logistics payment approved successfully');
   } catch (error) {
@@ -150,7 +154,7 @@ export const approveLogisticsPayment = async (req, res) => {
  */
 export const rejectLogisticsPayment = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     const result = await adminService.rejectLogisticsPayment(id);
     return sendSuccess(res, result, 'Logistics payment rejected successfully');
   } catch (error) {
@@ -163,7 +167,7 @@ export const rejectLogisticsPayment = async (req, res) => {
  */
 export const rejectOrder = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     const result = await adminService.rejectOrder(id);
     return sendSuccess(res, result, 'Order rejected successfully');
   } catch (error) {
@@ -200,14 +204,14 @@ export const getPendingOutgoingPayments = async (req, res) => {
  */
 export const markSellerPaymentPaid = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { paymentScreenshot } = req.body;
+    const {id} = req.params;
+    const {paymentScreenshot} = req.body;
     const adminId = req.user?.userId || req.user?.id;
-    
+
     if (!paymentScreenshot) {
       return sendError(res, 'Payment screenshot is required', 400);
     }
-    
+
     const result = await adminService.markSellerPaymentPaid(id, paymentScreenshot, adminId);
     return sendSuccess(res, result, 'Seller payment marked as paid successfully');
   } catch (error) {
@@ -220,14 +224,14 @@ export const markSellerPaymentPaid = async (req, res) => {
  */
 export const markLogisticsPaymentPaid = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { paymentScreenshot } = req.body;
+    const {id} = req.params;
+    const {paymentScreenshot} = req.body;
     const adminId = req.user?.userId || req.user?.id;
-    
+
     if (!paymentScreenshot) {
       return sendError(res, 'Payment screenshot is required', 400);
     }
-    
+
     const result = await adminService.markLogisticsPaymentPaid(id, paymentScreenshot, adminId);
     return sendSuccess(res, result, 'Logistics payment marked as paid successfully');
   } catch (error) {
