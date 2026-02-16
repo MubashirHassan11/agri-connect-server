@@ -1,71 +1,79 @@
-import {Resend} from 'resend';
+import nodemailer from 'nodemailer';
 import env from '../config/env.js';
 import logger from '../utils/logger.js';
+import {getApprovedTemplate} from '../template/approved.js';
+import {forgetPassTempl} from '../template/forgetPass.js';
 
-const resend = new Resend(env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: env.EMAIL_USER,
+    pass: env.EMAIL_PASS
+  }
+});
+
+export const sendEmail = async ({to, subject, html, text}) => {
+  try {
+    const info = await transporter.sendMail({
+      from: `"AgriConnect" <${env.EMAIL_USER}>`,
+      to,
+      subject,
+      text,
+      html
+    });
+    logger.info('Email sent successfully', {messageId: info.messageId, to});
+    return info;
+  } catch (error) {
+    logger.error('Error sending email', {error: error.message, to, subject});
+    throw error;
+  }
+};
 
 export const sendPasswordResetEmail = async (email, name, resetLink) => {
-  if (!env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY is not configured');
-  }
-
   if (!resetLink) {
     throw new Error('Reset link is required');
   }
 
   try {
-    const {data, error} = await resend.emails.send({
-      from: 'AgriConnect <noreply@agri-connect.store>',
+    const subject = 'Reset Your AgriConnect Password';
+    const html = forgetPassTempl(name, resetLink);
+
+    const info = await transporter.sendMail({
+      from: `"AgriConnect" <${env.EMAIL_USER}>`,
       to: email,
-      template: {
-        id: 'password-reset-1',
-        variables: {
-          link: resetLink,
-          name
-        }
-      }
+      subject,
+      html
     });
 
-    if (error) {
-      logger.error('Resend email error', error);
-    }
-
-    logger.info('Password reset email sent successfully', {email, messageId: data?.id});
-    return data;
+    logger.info('Password reset email sent successfully', {email, messageId: info.messageId});
+    return info;
   } catch (error) {
     logger.error('Error sending password reset email', {error: error.message, email});
     throw error;
   }
 };
+
 export const sendOnboardingEmail = async (email, name) => {
-  if (!env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY is not configured');
-  }
   if (!email) {
     logger.warn('Email not provided for notification');
     return;
   }
 
   try {
-    const {data, error} = await resend.emails.send({
-      from: 'AgriConnect <noreply@agri-connect.store>',
+    const subject = 'Welcome to AgriConnect - Your Account is Approved!';
+    const html = getApprovedTemplate(name);
+
+    const info = await transporter.sendMail({
+      from: `"AgriConnect" <${env.EMAIL_USER}>`,
       to: email,
-      template: {
-        id: 'account-approval-welcome',
-        variables: {
-          name
-        }
-      }
+      subject,
+      html
     });
 
-    if (error) {
-      logger.error('Resend email error', error);
-    }
-
-    logger.info('Password reset email sent successfully', {email, messageId: data?.id});
-    return data;
+    logger.info('Onboarding email sent successfully', {email, messageId: info.messageId});
+    return info;
   } catch (error) {
-    logger.error('Error sending password reset email', {error: error.message, email});
+    logger.error('Error sending onboarding email', {error: error.message, email});
     throw error;
   }
 };
